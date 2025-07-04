@@ -1,7 +1,9 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from keras.saving import register_keras_serializable
 
+@register_keras_serializable(package='Custom')
 class MatrixFactorization(keras.Model):
     """
     Modelo de recomendación que realiza una matriz de factorización utilizando embeddings para usuarios y películas.
@@ -24,6 +26,7 @@ class MatrixFactorization(keras.Model):
         self.n_users = n_users
         self.n_movies = n_movies
         self.embedding_size = embedding_size
+        self.reg_l2 = reg_l2
 
         # Embedding de usuarios y de sesgo
         self.user_embedding = layers.Embedding(
@@ -76,6 +79,21 @@ class MatrixFactorization(keras.Model):
         x = dot_user_movie + user_bias + movie_bias
 
         return x
+    
+    # Funciones para aplicar configuración al guardar y cargar el modelo
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "n_users": self.n_users,
+            "n_movies": self.n_movies,
+            "embedding_size": self.embedding_size,
+            "reg_l2": self.reg_l2,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
     
 
 def codificar_usuario(user_id:int, user_to_idx:dict, desconocido:int=-1):
