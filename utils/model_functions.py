@@ -76,7 +76,10 @@ class MatrixFactorization(keras.Model):
         dot_user_movie = tf.tensordot(user_vector, movie_vector, 2)
 
         # Cálculo de predicción
-        x = dot_user_movie + user_bias + movie_bias
+        producto = dot_user_movie + user_bias + movie_bias
+
+        # Ajuste a valores entre 0.5 y 5
+        x = 0.5 + 4.5 * tf.sigmoid(producto)
 
         return x
     
