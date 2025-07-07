@@ -279,22 +279,17 @@ def elegir_pelicula_llm_2(texto_usuario:str, df_predicciones_top:pd.DataFrame, G
         Respuesta del modelo (recomendación y explicación).
     """
 
-    llm_1 = ChatGroq(
+    llm_2 = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name=MODEL_NAME
     )
     
     df_coincidencias = df_predicciones_top[df_predicciones_top['coincide'] == True].copy()
 
-    lista = []
-    for i in range(len(df_coincidencias)):
-        sublista = []
-        sublista.append(f'Título: {df_coincidencias.iloc[i]['titulo']}')
-        sublista.append(f'Sinopsis: {df_coincidencias.iloc[i]['sinopsis']}')
-        sublista.append(f'Géneros: {df_coincidencias.iloc[i]['generos']}')
-        sublista.append(f'Rating: {df_coincidencias.iloc[i]['rating']}')
-
-        lista.append(sublista)
+    df_coincidencias['contenido'] = df_coincidencias.apply(
+        lambda row: f"Título: {row['titulo']}. Géneros: {row['generos']}. Rating predicho: {row['rating']}. Sinopsis: {row['sinopsis']}",
+        axis=1
+    )
     
     prompt = f"""
 El usuario escribió: '{texto_usuario}'
@@ -308,10 +303,56 @@ En el caso de basarte principalmente en el rating, no menciones explícitamente 
 Dirígete directamente al usuario.
 
 Las películas son las siguientes:
-{lista}
+{df_coincidencias['contenido'].to_list()}
 """
     try:
-        response = llm_1.invoke([HumanMessage(content=prompt)])
+        response = llm_2.invoke([HumanMessage(content=prompt)])
+        return response.content.strip()
+    
+    except Exception as e:
+        print(f"Error con Groq: {e}")
+        return "Error"
+
+
+def elegir_pelicula_llm_3(texto_usuario:str, GROQ_API_KEY:str, MODEL_NAME:str):
+    """
+    LLM que lee la descripción del usuario y recomienda una película genérica en base a lo que busca.
+
+    Parameters
+    ----------
+    texto_usuario : str
+        Descripción del usuario.
+
+    GROQ_API_KEY : str
+        API key de Groq.
+    
+    MODEL_NAME : str
+        Modelo elegido disponible en Groq Cloud.
+
+    Returns
+    -------
+    response.content.strip() : str
+        Respuesta del modelo (recomendación y explicación).
+    """
+
+    llm_3 = ChatGroq(
+    groq_api_key=GROQ_API_KEY,
+    model_name=MODEL_NAME
+    )
+
+    prompt = f"""
+El usuario escribió: '{texto_usuario}'
+
+Revisa lo que dice el usuario sobre lo que quiere ver, teniendo en cuenta si lo que menciona es algo que le gusta o que no le gusta.
+Si el usuario quiere ver cualquier película excepto alguna en concreto, ten en cuenta que cualquier película que no incluya esa excepción coincide con lo que quiere ver.
+
+Basándote en tu propio criterio y en lo que quiere el usuario, decide una película entre las que conozcas le pueda gustar.
+Recomienda esa película al usuario y da una explicación breve sobre por qué recomiendas esa película (máximo 2 líneas).
+Dirígete directamente al usuario.
+"""
+    
+    try:
+        response = llm_3.invoke([HumanMessage(content=prompt)])
         return response.content.strip()
     
     except Exception as e:
