@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras import layers # type: ignore
 from keras.saving import register_keras_serializable
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
@@ -245,6 +245,70 @@ Si el usuario quiere ver cualquier película excepto alguna en concreto, ten en 
 Título: {pelicula['titulo']}
 Géneros: {pelicula['generos']}
 Sinopsis: {pelicula['sinopsis']}
+"""
+    try:
+        response = llm_1.invoke([HumanMessage(content=prompt)])
+        return response.content.strip()
+    
+    except Exception as e:
+        print(f"Error con Groq: {e}")
+        return "Error"
+
+
+def elegir_pelicula_llm_2(texto_usuario:str, df_predicciones_top:pd.DataFrame, GROQ_API_KEY:str, MODEL_NAME:str):
+    """
+    LLM que lee la descripción del usuario y las películas que coinciden, y recomienda una basándose en rating, sinopsis y géneros.
+
+    Parameters
+    ----------
+    texto_usuario : str
+        Descripción del usuario.
+    
+    df_predicciones_top : Pandas DataFrame
+        Dataframe de Pandas que incluye rating, título, géneros y sinopsis de las películas que coinciden.
+
+    GROQ_API_KEY : str
+        API key de Groq.
+    
+    MODEL_NAME : str
+        Modelo elegido disponible en Groq Cloud.
+
+    Returns
+    -------
+    response.content.strip() : str
+        Respuesta del modelo (recomendación y explicación).
+    """
+
+    llm_1 = ChatGroq(
+    groq_api_key=GROQ_API_KEY,
+    model_name=MODEL_NAME
+    )
+    
+    df_coincidencias = df_predicciones_top[df_predicciones_top['coincide'] == True].copy()
+
+    lista = []
+    for i in range(len(df_coincidencias)):
+        sublista = []
+        sublista.append(f'Título: {df_coincidencias.iloc[i]['titulo']}')
+        sublista.append(f'Sinopsis: {df_coincidencias.iloc[i]['sinopsis']}')
+        sublista.append(f'Géneros: {df_coincidencias.iloc[i]['generos']}')
+        sublista.append(f'Rating: {df_coincidencias.iloc[i]['rating']}')
+
+        lista.append(sublista)
+    
+    prompt = f"""
+El usuario escribió: '{texto_usuario}'
+
+Revisa lo que dice el usuario sobre lo que quiere ver, teniendo en cuenta si lo que menciona es algo que le gusta o que no le gusta.
+Si el usuario quiere ver cualquier película excepto alguna en concreto, ten en cuenta que cualquier película que no incluya esa excepción coincide con lo que quiere ver.
+
+El rating es predicho. Basándote en ese rating (siendo 0.5 el peor y 5 el mejor), y en base a la sinopsis y los géneros, decide una película entre las que hay aquí.
+Recomienda esa película al usuario y da una explicación breve sobre por qué recomiendas esa película (máximo 2 líneas).
+En el caso de basarte principalmente en el rating, no menciones explícitamente el valor, di que crees que es la que más podría gustarle.
+Dirígete directamente al usuario.
+
+Las películas son las siguientes:
+{lista}
 """
     try:
         response = llm_1.invoke([HumanMessage(content=prompt)])
