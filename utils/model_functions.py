@@ -2,6 +2,9 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from keras.saving import register_keras_serializable
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
+import pandas as pd
 
 @register_keras_serializable(package='Custom')
 class MatrixFactorization(keras.Model):
@@ -199,3 +202,54 @@ def descodificar_pelicula(movie_idx:int, idx_to_movie:dict):
     movie_id = idx_to_movie.get(movie_idx, None)
 
     return movie_id
+
+
+def revisar_match_llm_1(texto_usuario:str, pelicula:pd.Series, GROQ_API_KEY:str, MODEL_NAME:str):
+    """
+    LLM que lee la descripción del usuario y lo coteja con la información de cada película.
+    
+    Devuelve información sobre si coincide o no con lo que el usuario busca.
+
+    Parameters
+    ----------
+    texto_usuario : str
+        Descripción del usuario.
+    
+    pelicula : Pandas Series
+        Serie de Pandas que incluye título, géneros y sinopsis.
+
+    GROQ_API_KEY : str
+        API key de Groq.
+    
+    MODEL_NAME : str
+        Modelo elegido disponible en Groq Cloud.
+
+    Returns
+    -------
+    response.content.strip() : str
+        Respuesta del modelo (Sí o No).
+    """
+    
+    llm_1 = ChatGroq(
+    groq_api_key=GROQ_API_KEY,
+    model_name=MODEL_NAME
+    )
+    
+    prompt = f"""
+El usuario escribió: '{texto_usuario}'
+
+Revisa lo que dice el usuario sobre lo que quiere ver, teniendo en cuenta si lo que menciona es algo que le gusta o que no le gusta.
+Si el usuario quiere ver cualquier película excepto alguna en concreto, ten en cuenta que cualquier película que no incluya esa excepción coincide.
+¿Esta película coincide con lo que busca? Solo responde 'Sí' o 'No'.
+
+Título: {pelicula['titulo']}
+Géneros: {pelicula['generos']}
+Sinopsis: {pelicula['sinopsis']}
+"""
+    try:
+        response = llm_1.invoke([HumanMessage(content=prompt)])
+        return response.content.strip()
+    
+    except Exception as e:
+        print(f"Error con Groq: {e}")
+        return "Error"
