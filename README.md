@@ -3,7 +3,7 @@
 ## Descripción
 
 Este proyecto consiste en la creación de un sistema de recomendación basado en filtro colaborativo. En este caso, dicho filtro es elaborado con una red neuronal MLP.
-Posteriormente, se utilizan tres NLP para procesar las peticiones del usuario y generar una recomendación basada en las preferencias y en las predicciones.
+Posteriormente, se utilizan tres LLM para procesar las peticiones del usuario y generar una recomendación basada en las preferencias y en las predicciones.
 
 ## Instrucciones
 
